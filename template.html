@@ -1,0 +1,810 @@
+<title>USD/JPY テクニカルダッシュボード</title>
+<style>
+  :root{
+    color-scheme: light;
+    --page:      #f9f9f7;
+    --surface:   #fcfcfb;
+    --surface-2: #f3f2ee;
+    --ink:       #0b0b0b;
+    --ink-2:     #52514e;
+    --ink-muted: #898781;
+    --grid:      #e1e0d9;
+    --axis:      #c3c2b7;
+    --border:    rgba(11,11,11,0.10);
+    --series-price:  #2a78d6;
+    --series-sma20:  #eb6834;
+    --series-sma50:  #1baf7a;
+    --series-sma200: #4a3aa7;
+    --good:      #0ca30c;
+    --good-text: #006300;
+    --warning:   #fab219;
+    --critical:  #d03b3b;
+    --tooltip-bg: #ffffff;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:where(:not([data-theme="light"])){
+      color-scheme: dark;
+      --page:      #0d0d0d;
+      --surface:   #1a1a19;
+      --surface-2: #202020;
+      --ink:       #ffffff;
+      --ink-2:     #c3c2b7;
+      --ink-muted: #898781;
+      --grid:      #2c2c2a;
+      --axis:      #383835;
+      --border:    rgba(255,255,255,0.10);
+      --series-price:  #3987e5;
+      --series-sma20:  #d95926;
+      --series-sma50:  #199e70;
+      --series-sma200: #9085e9;
+      --good:      #0ca30c;
+      --good-text: #0ca30c;
+      --warning:   #fab219;
+      --critical:  #e66767;
+      --tooltip-bg: #242423;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --page:      #0d0d0d;
+    --surface:   #1a1a19;
+    --surface-2: #202020;
+    --ink:       #ffffff;
+    --ink-2:     #c3c2b7;
+    --ink-muted: #898781;
+    --grid:      #2c2c2a;
+    --axis:      #383835;
+    --border:    rgba(255,255,255,0.10);
+    --series-price:  #3987e5;
+    --series-sma20:  #d95926;
+    --series-sma50:  #199e70;
+    --series-sma200: #9085e9;
+    --good:      #0ca30c;
+    --good-text: #0ca30c;
+    --warning:   #fab219;
+    --critical:  #e66767;
+    --tooltip-bg: #242423;
+  }
+
+  *{ box-sizing:border-box; }
+  body{ margin:0; }
+  .dash{
+    font-family: system-ui, -apple-system, "Segoe UI", "Hiragino Kaku Gothic ProN", sans-serif;
+    background: var(--page);
+    color: var(--ink);
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 20px 20px 48px;
+  }
+  .mono{
+    font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- header ---------- */
+  .hero{
+    display:flex; flex-wrap:wrap; align-items:baseline; gap:14px 22px;
+    padding: 18px 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+  }
+  .hero .pair{ font-size:15px; font-weight:700; letter-spacing:.02em; color:var(--ink-2); }
+  .hero .price{ font-size:34px; font-weight:700; }
+  .chip{
+    display:inline-flex; align-items:center; gap:5px;
+    padding: 3px 10px; border-radius: 999px; font-size:13px; font-weight:600;
+  }
+  .chip.up{ background: color-mix(in srgb, var(--good) 15%, transparent); color: var(--good-text); }
+  .chip.down{ background: color-mix(in srgb, var(--critical) 15%, transparent); color: var(--critical); }
+  .hero .meta{ margin-left:auto; text-align:right; font-size:12px; color:var(--ink-muted); line-height:1.6; }
+  .refresh-btn{
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:12.5px; font-weight:600; text-decoration:none;
+    padding:7px 14px; border-radius:999px; border:1px solid var(--border);
+    background:var(--surface-2); color:var(--ink-2); white-space:nowrap;
+  }
+  .refresh-btn:hover{ color:var(--ink); border-color:var(--series-price); }
+
+  h2.section-title{
+    font-size: 15px; font-weight:700; margin: 34px 0 4px;
+    display:flex; align-items:center; gap:8px;
+  }
+  p.section-desc{ margin: 0 0 14px; font-size:13px; color:var(--ink-2); line-height:1.7; max-width: 70ch; }
+  p.section-desc a{ color: var(--series-price); }
+
+  /* ---------- timeframe selector ---------- */
+  .tf-row{ display:flex; flex-wrap:wrap; gap:6px; margin:16px 2px 0; }
+  .tf-btn{
+    font-family:inherit; font-size:12.5px; font-weight:600; cursor:pointer;
+    padding:6px 13px; border-radius:999px; border:1px solid var(--border);
+    background:var(--surface); color:var(--ink-2);
+  }
+  .tf-btn:hover{ color:var(--ink); }
+  .tf-btn.active{ background:var(--series-price); border-color:var(--series-price); color:#fff; }
+  .tf-btn:focus-visible{ outline:2px solid var(--series-price); outline-offset:2px; }
+
+  /* ---------- legend ---------- */
+  .legend-row{
+    display:flex; flex-wrap:wrap; gap:14px 20px;
+    margin: 18px 2px 8px; font-size:12.5px; color:var(--ink-2);
+  }
+  .legend-row .item{ display:flex; align-items:center; gap:6px; }
+  .swatch{ width:14px; height:3px; border-radius:2px; display:inline-block; }
+  .swatch.band{ width:14px; height:9px; border-radius:2px; opacity:.35; }
+  .swatch.dash{ width:14px; height:0; border-top:2px dashed var(--ink-muted); }
+  .candle-sw{ position:relative; width:14px; height:16px; display:inline-block; }
+  .candle-sw i{ position:absolute; left:50%; top:0; bottom:0; width:1px; transform:translateX(-50%); }
+  .candle-sw i::after{ content:""; position:absolute; left:50%; top:4px; width:7px; height:8px; transform:translateX(-50%); border-radius:1px; }
+  .candle-sw i.up{ background:var(--good); }
+  .candle-sw i.up::after{ background:var(--good); }
+  .candle-sw i.down{ background:var(--critical); }
+  .candle-sw i.down::after{ background:var(--critical); }
+
+  /* ---------- chart stack ---------- */
+  .chart-card{
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 6px 6px 2px;
+    position: relative;
+  }
+  .chart-stack{ position:relative; }
+  svg.chart{ display:block; width:100%; height:auto; }
+  .panel-label{
+    position:absolute; top:8px; left:14px; font-size:11px; font-weight:700;
+    color: var(--ink-muted); letter-spacing:.04em; pointer-events:none;
+  }
+  .crosshair-line{
+    position:absolute; top:0; bottom:0; width:1px; background: var(--ink-muted);
+    opacity:0; pointer-events:none;
+  }
+  .tooltip{
+    position:absolute; pointer-events:none; opacity:0; z-index:5;
+    background: var(--tooltip-bg); border:1px solid var(--border); border-radius:10px;
+    padding:10px 12px; font-size:12px; line-height:1.6; box-shadow: 0 6px 20px rgba(0,0,0,.15);
+    min-width: 235px; transition: opacity .08s;
+  }
+  .tooltip .t-date{ font-weight:700; margin-bottom:4px; }
+  .tooltip .row{ display:flex; justify-content:space-between; gap:14px; color:var(--ink-2); }
+  .tooltip .row b{ color:var(--ink); font-weight:600; }
+
+  /* ---------- indicator explanations ---------- */
+  .explain-grid{
+    display:grid; grid-template-columns: repeat(auto-fit, minmax(230px,1fr));
+    gap:10px;
+  }
+  .explain-card{
+    background: var(--surface); border:1px solid var(--border); border-radius:12px;
+    padding: 14px 16px;
+  }
+  .explain-name{ font-size:13px; font-weight:700; margin-bottom:6px; }
+  .explain-card p{ margin:0; font-size:12.5px; color:var(--ink-2); line-height:1.7; }
+  .explain-card strong{ color:var(--ink); }
+
+  /* ---------- signal cards ---------- */
+  .signals-grid{
+    display:grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr));
+    gap:10px;
+  }
+  .sig-card{
+    background: var(--surface); border:1px solid var(--border); border-radius:12px;
+    padding: 14px 16px;
+  }
+  .sig-card .sig-name{ font-size:12px; color:var(--ink-muted); font-weight:600; margin-bottom:6px; }
+  .sig-card .sig-value{ font-size:19px; font-weight:700; margin-bottom:8px; }
+  .badge{
+    display:inline-flex; align-items:center; gap:5px; font-size:11.5px; font-weight:700;
+    padding:2px 9px; border-radius:999px; margin-bottom:9px;
+  }
+  .badge::before{ content:""; width:6px; height:6px; border-radius:50%; }
+  .badge.bull{ background: color-mix(in srgb, var(--good) 15%, transparent); color: var(--good-text); }
+  .badge.bull::before{ background: var(--good); }
+  .badge.bear{ background: color-mix(in srgb, var(--critical) 15%, transparent); color: var(--critical); }
+  .badge.bear::before{ background: var(--critical); }
+  .badge.neutral{ background: var(--surface-2); color: var(--ink-2); }
+  .badge.neutral::before{ background: var(--ink-muted); }
+  .sig-card .sig-note{ font-size:12px; color:var(--ink-2); line-height:1.6; }
+
+  /* ---------- backtest table ---------- */
+  .table-wrap{ overflow-x:auto; border:1px solid var(--border); border-radius:12px; }
+  table{ border-collapse:collapse; width:100%; min-width:740px; font-size:13px; }
+  thead th{
+    text-align:left; font-size:11.5px; color:var(--ink-muted); font-weight:700;
+    padding:10px 14px; background:var(--surface-2); border-bottom:1px solid var(--border);
+    white-space:nowrap;
+  }
+  tbody td{ padding:11px 14px; border-bottom:1px solid var(--grid); background:var(--surface); }
+  tbody tr:last-child td{ border-bottom:none; }
+  td.num{ text-align:right; }
+  .win-pos{ color: var(--good-text); font-weight:700; }
+  .win-neg{ color: var(--critical); font-weight:700; }
+  .strategy-name{ font-weight:600; }
+  .strategy-sub{ display:block; font-size:11.5px; color:var(--ink-muted); font-weight:400; margin-top:2px; }
+  .dir-chip{ display:inline-block; font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px; }
+  .dir-chip.buy{ background: color-mix(in srgb, var(--good) 15%, transparent); color: var(--good-text); }
+  .dir-chip.sell{ background: color-mix(in srgb, var(--critical) 15%, transparent); color: var(--critical); }
+
+  /* ---------- synthesis ---------- */
+  .synthesis{
+    background: var(--surface); border:1px solid var(--border); border-radius:14px;
+    padding: 18px 22px;
+  }
+  .verdict-row{ display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+  .verdict-row .badge{ margin-bottom:0; font-size:12.5px; }
+  .verdict-row .verdict-title{ font-size:16px; font-weight:700; }
+  .synthesis h3{ font-size:13px; margin:16px 0 6px; }
+  .synthesis p, .synthesis li{ font-size:13.5px; line-height:1.85; color:var(--ink-2); }
+  .synthesis ul{ margin:6px 0; padding-left:20px; }
+  .synthesis strong{ color:var(--ink); }
+  .scenario-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:14px; margin-top:10px; }
+  @media (max-width:640px){ .scenario-grid{ grid-template-columns:1fr; } }
+  .scenario{ background:var(--surface-2); border-radius:10px; padding:12px 14px; }
+  .scenario .sc-title{ font-size:12.5px; font-weight:700; margin-bottom:6px; }
+  .top-signal-box{
+    background: color-mix(in srgb, var(--good) 10%, var(--surface-2));
+    border: 1px solid color-mix(in srgb, var(--good) 30%, var(--border));
+    border-radius: 10px; padding: 12px 16px; margin: 4px 0 14px;
+  }
+  .top-signal-box .ts-label{ font-size:11.5px; color:var(--ink-muted); font-weight:600; margin-bottom:4px; }
+  .top-signal-box .ts-value{ font-size:15px; font-weight:700; color:var(--ink); }
+  .top-signal-box .ts-value .mono{ color:var(--good-text); }
+  .top-signal-box .ts-sub{ font-size:12px; font-weight:400; color:var(--ink-2); }
+
+  footer.note{
+    margin-top:28px; padding-top:16px; border-top:1px solid var(--border);
+    font-size:11.5px; color:var(--ink-muted); line-height:1.8;
+  }
+</style>
+
+<div class="dash">
+
+  <div class="hero">
+    <div>
+      <div class="pair">USD/JPY(米ドル/日本円)</div>
+      <div class="price mono" id="hero-price">—</div>
+    </div>
+    <span class="chip up" id="hero-chip">—</span>
+    <div class="meta" id="hero-meta"></div>
+    <a class="refresh-btn" href="https://github.com/hidejyu/usdjpy-dashboard/actions/workflows/update.yml" target="_blank" rel="noopener">&#8635; 手動更新</a>
+  </div>
+
+  <h2 class="section-title">チャート & 主要テクニカル指標</h2>
+  <p class="section-desc" id="chart-desc"></p>
+
+  <div class="tf-row" id="tf-row"></div>
+
+  <div class="legend-row">
+    <span class="item"><span class="candle-sw"><i class="up"></i></span>陽線(上昇)</span>
+    <span class="item"><span class="candle-sw"><i class="down"></i></span>陰線(下落)</span>
+    <span class="item"><span class="swatch" style="background:var(--series-sma20)"></span>SMA20</span>
+    <span class="item"><span class="swatch" style="background:var(--series-sma50)"></span>SMA50</span>
+    <span class="item"><span class="swatch" style="background:var(--series-sma200)"></span>SMA200</span>
+    <span class="item"><span class="swatch band" style="background:var(--series-price)"></span>ボリンジャーバンド(20,±2σ)</span>
+    <span class="item"><span class="swatch dash"></span>サポート/レジスタンス</span>
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-stack" id="chart-stack">
+      <div class="panel-label">価格 (JPY)</div>
+      <svg class="chart" id="svg-price" viewBox="0 0 1000 340"></svg>
+      <div class="panel-label">RSI (14)</div>
+      <svg class="chart" id="svg-rsi" viewBox="0 0 1000 130"></svg>
+      <div class="panel-label">MACD (12,26,9)</div>
+      <svg class="chart" id="svg-macd" viewBox="0 0 1000 150"></svg>
+      <div class="crosshair-line" id="crosshair"></div>
+      <div class="tooltip" id="tooltip"></div>
+    </div>
+  </div>
+
+  <h2 class="section-title">テクニカル指標の解説</h2>
+  <p class="section-desc">このダッシュボードで使用している指標の意味と読み方です。</p>
+  <div class="explain-grid">
+    <div class="explain-card">
+      <div class="explain-name">移動平均線(SMA20 / 50 / 200)</div>
+      <p>直近N期間の終値の単純平均を結んだ線で、トレンドの方向性を把握する最も基本的な指標。短期線が長期線より上にある状態(パーフェクトオーダー)は上昇トレンド、逆は下降トレンドを示唆する。ゴールデンクロス(短期線が長期線を上抜け)は買い、デッドクロス(下抜け)は売りのサインとされる。</p>
+    </div>
+    <div class="explain-card">
+      <div class="explain-name">RSI(相対力指数・14期間)</div>
+      <p>一定期間の値上がり幅と値下がり幅の比率から算出される0〜100のオシレーター系指標。一般的に<strong>70以上で買われすぎ</strong>、<strong>30以下で売られすぎ</strong>の目安とされる。価格と逆行する「ダイバージェンス」はトレンド転換の先行シグナルとして注目される。</p>
+    </div>
+    <div class="explain-card">
+      <div class="explain-name">MACD(12,26,9)</div>
+      <p>短期(12)・長期(26)の指数移動平均線(EMA)の差である「MACD線」と、その移動平均である「シグナル線」でモメンタム(勢い)を測る指標。MACD線がシグナル線を上抜くと強気、下抜くと弱気のサイン。ヒストグラム(棒グラフ)は両者の差で、勢いの拡大・縮小を視覚化する。</p>
+    </div>
+    <div class="explain-card">
+      <div class="explain-name">ボリンジャーバンド(20,±2σ)</div>
+      <p>移動平均線を中心に、値動きの標準偏差(σ)でバンドを描いたもの。統計上、値動きの約95%は±2σの範囲内に収まるとされ、<strong>バンドを突破する動きは統計的な「行き過ぎ」</strong>のサインとされる。ただし強いトレンド発生時はバンドに沿って推移し続けることもある。</p>
+    </div>
+    <div class="explain-card">
+      <div class="explain-name">サポート・レジスタンス(20日/60日)</div>
+      <p>一定期間の安値(サポート=支持線)・高値(レジスタンス=抵抗線)の水準。過去に何度も反発・反落してきた価格帯であり、次にその水準へ近づいた際の反発ポイント、あるいは突破した場合の加速ポイントとして意識されやすい。</p>
+    </div>
+    <div class="explain-card">
+      <div class="explain-name">ダブルトップ/ダブルボトム</div>
+      <p>代表的なチャートパターン分析の一つ。2つの高値(または安値)がほぼ同水準で並び、その間の安値(高値)を結んだ「ネックライン」を price が反対方向に突破した時点で完成とみなす。<strong>ダブルボトム=買いサイン</strong>、<strong>ダブルトップ=売りサイン</strong>とされる。このダッシュボードでは過去の値動きから機械的に検出・バックテストしている。</p>
+    </div>
+  </div>
+
+  <h2 class="section-title">指標別シグナルと示唆</h2>
+  <p class="section-desc">各指標が直近終値に対して現在どのようなシグナルを示しているかをまとめました(日足ベース)。</p>
+  <div class="signals-grid" id="signals-grid"></div>
+
+  <h2 class="section-title">過去実績に基づく的中率(簡易バックテスト)</h2>
+  <p class="section-desc" id="backtest-desc"></p>
+  <div class="table-wrap">
+    <table id="backtest-table">
+      <thead>
+        <tr>
+          <th>手法</th>
+          <th>方向</th>
+          <th class="num">シグナル数</th>
+          <th class="num">1日後 勝率</th>
+          <th class="num">1日後 平均損益</th>
+          <th class="num">1週間後 勝率</th>
+          <th class="num">1週間後 平均損益</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <h2 class="section-title">総合分析(テクニカル)</h2>
+  <div class="synthesis" id="synthesis"></div>
+
+  <h2 class="section-title">ファンダメンタルズ(政治・経済)分析</h2>
+  <p class="section-desc" id="fundamentals-desc"></p>
+  <div class="signals-grid" id="fundamentals-grid"></div>
+  <div class="synthesis" id="fundamentals-synthesis" style="margin-top:10px;"></div>
+  <p class="section-desc" id="fundamentals-sources" style="margin-top:10px;"></p>
+
+  <footer class="note" id="footer-note"></footer>
+</div>
+
+<script>
+const DATA = __DATA_JSON__;
+
+const d = DATA.display;
+const n = d.dates.length;
+const cur = DATA.current;
+
+/* ---------------- helpers ---------------- */
+function fmt(v, digits){ return v==null ? '—' : v.toFixed(digits==null?2:digits); }
+function css(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+
+/* ---------------- header / dynamic text ---------------- */
+{
+  const up = DATA.day_change >= 0;
+  document.getElementById('hero-price').textContent = cur.close.toFixed(3);
+  const chip = document.getElementById('hero-chip');
+  chip.className = 'chip ' + (up ? 'up' : 'down');
+  chip.textContent = (up?'▲ +':'▼ ')+DATA.day_change.toFixed(3)+' ('+(up?'+':'')+DATA.day_change_pct.toFixed(2)+'%)';
+  document.getElementById('hero-meta').innerHTML =
+    `日次OHLC(Yahoo Finance) &middot; ${cur.updated_at_jst || cur.date} 時点(JST)<br>過去データ: ${DATA.history_range.start} 〜 ${DATA.history_range.end}(${DATA.history_range.n}営業日)`;
+  document.getElementById('chart-desc').textContent = `時間足を切り替えて表示できます。マウスを重ねると各足の値を確認できます。`;
+  document.getElementById('backtest-desc').innerHTML =
+    `過去${DATA.history_range.n}営業日の実データに、各指標の教科書的な売買ルールを機械的に適用した場合の勝率・平均リターンを、<strong>買いシグナルと売りシグナルに分けて</strong>集計しています。`+
+    `「1日」は翌営業日終値までの成績(朝方の売買を想定)、「1週間」は5営業日後終値までの成績です。`;
+  document.getElementById('footer-note').innerHTML =
+    `データ出所: Yahoo Finance(USD/JPY 日次OHLC)。実勢のブローカー気配やスプレッドとは若干異なる場合があります。<br>`+
+    `バックテストは「移動平均クロス」「RSI逆張り」「MACDクロス」「ボリンジャーバンドタッチ」という教科書的な単純ルールを終値ベースで機械適用したものです。手数料・スプレッド・スリッページは考慮しておらず、シグナル数が少ない手法は統計的な誤差が大きい点にご留意ください。過去の成績は将来の成果を保証するものではありません。<br>`+
+    `本コンテンツは情報提供を目的としたものであり、特定の売買を推奨する投資助言ではありません。投資判断はご自身の責任で行ってください。`;
+}
+
+function pathFrom(xs, ys, vals){
+  let s = '';
+  for(let i=0;i<vals.length;i++){
+    if(vals[i]==null) continue;
+    const cmd = (s==='' ) ? 'M' : 'L';
+    s += `${cmd}${xs[i].toFixed(2)},${ys(vals[i]).toFixed(2)} `;
+  }
+  return s;
+}
+
+function minMax(arrays){
+  let mn = Infinity, mx = -Infinity;
+  arrays.forEach(arr=>arr.forEach(v=>{ if(v!=null){ if(v<mn) mn=v; if(v>mx) mx=v; } }));
+  return [mn, mx];
+}
+
+const PAD = {left:8, right:56, top:14, bottom:14};
+const VB_W = 1000;
+const VB_H_PRICE = 340, VB_H_RSI = 130, VB_H_MACD = 150;
+const priceSvg = document.getElementById('svg-price');
+const rsiSvg = document.getElementById('svg-rsi');
+const macdSvg = document.getElementById('svg-macd');
+
+let activeD = d, activeN = n;
+
+function xScaleFor(nn){ return i => PAD.left + (i/(nn-1)) * (VB_W - PAD.left - PAD.right); }
+
+/* ================= price chart ================= */
+function renderPriceChart(dd, curD){
+  const nn = dd.dates.length;
+  const xScale = xScaleFor(nn);
+  const [mn, mx] = minMax([dd.highs, dd.lows, dd.sma20, dd.sma50, dd.sma200, dd.bb_upper, dd.bb_lower]);
+  const span = (mx-mn) || 1;
+  const lo = mn - span*0.06, hi = mx + span*0.10;
+  const y = v => PAD.top + (1 - (v-lo)/(hi-lo)) * (VB_H_PRICE-PAD.top-PAD.bottom);
+  const xs = dd.dates.map((_,i)=>xScale(i));
+  const step = (VB_W - PAD.left - PAD.right) / nn;
+  const bodyW = Math.max(1.2, step*0.62);
+
+  let svg = '';
+  for(let g=0; g<=4; g++){
+    const val = lo + (hi-lo)*g/4;
+    const yy = y(val);
+    svg += `<line x1="${PAD.left}" x2="${VB_W-PAD.right}" y1="${yy}" y2="${yy}" stroke="var(--grid)" stroke-width="1"/>`;
+    svg += `<text x="${VB_W-PAD.right+8}" y="${yy+4}" font-size="11" fill="var(--ink-muted)">${val.toFixed(1)}</text>`;
+  }
+  const bandPts = [];
+  for(let i=0;i<nn;i++) if(dd.bb_upper[i]!=null) bandPts.push([xs[i], y(dd.bb_upper[i])]);
+  for(let i=nn-1;i>=0;i--) if(dd.bb_lower[i]!=null) bandPts.push([xs[i], y(dd.bb_lower[i])]);
+  if(bandPts.length){
+    const dstr = bandPts.map((p,idx)=> (idx===0?'M':'L')+p[0].toFixed(2)+','+p[1].toFixed(2)).join(' ') + ' Z';
+    svg += `<path d="${dstr}" fill="var(--series-price)" opacity="0.10" stroke="none"/>`;
+  }
+  const levels = [curD.res60, curD.res20, curD.sup20, curD.sup60];
+  const seen = new Set();
+  levels.forEach(v=>{
+    const key = v.toFixed(2);
+    if(seen.has(key)) return; seen.add(key);
+    const yy = y(v);
+    svg += `<line x1="${PAD.left}" x2="${VB_W-PAD.right}" y1="${yy}" y2="${yy}" stroke="var(--ink-muted)" stroke-width="1.2" stroke-dasharray="4,4" opacity="0.7"/>`;
+  });
+  svg += `<path d="${pathFrom(xs,y,dd.sma200)}" fill="none" stroke="var(--series-sma200)" stroke-width="2"/>`;
+  svg += `<path d="${pathFrom(xs,y,dd.sma50)}" fill="none" stroke="var(--series-sma50)" stroke-width="2"/>`;
+  svg += `<path d="${pathFrom(xs,y,dd.sma20)}" fill="none" stroke="var(--series-sma20)" stroke-width="2"/>`;
+  for(let i=0;i<nn;i++){
+    const o=dd.opens[i], h=dd.highs[i], l=dd.lows[i], c=dd.closes[i];
+    if(o==null||h==null||l==null||c==null) continue;
+    const up = c >= o;
+    const color = up ? 'var(--good)' : 'var(--critical)';
+    const x = xs[i];
+    svg += `<line x1="${x.toFixed(2)}" x2="${x.toFixed(2)}" y1="${y(h).toFixed(2)}" y2="${y(l).toFixed(2)}" stroke="${color}" stroke-width="1"/>`;
+    const yTop = y(Math.max(o,c)), yBot = y(Math.min(o,c));
+    const hgt = Math.max(1, yBot-yTop);
+    svg += `<rect x="${(x-bodyW/2).toFixed(2)}" y="${yTop.toFixed(2)}" width="${bodyW.toFixed(2)}" height="${hgt.toFixed(2)}" fill="${color}"/>`;
+  }
+  priceSvg.innerHTML = svg;
+  priceSvg._xs = xs;
+}
+
+/* ================= RSI chart ================= */
+function renderRsiChart(dd){
+  const nn = dd.dates.length;
+  const xScale = xScaleFor(nn);
+  const y = v => PAD.top + (1 - v/100) * (VB_H_RSI-PAD.top-PAD.bottom);
+  const xs = dd.dates.map((_,i)=>xScale(i));
+  let svg = '';
+  svg += `<rect x="${PAD.left}" y="${y(100)}" width="${VB_W-PAD.left-PAD.right}" height="${y(70)-y(100)}" fill="var(--critical)" opacity="0.07"/>`;
+  svg += `<rect x="${PAD.left}" y="${y(30)}" width="${VB_W-PAD.left-PAD.right}" height="${y(0)-y(30)}" fill="var(--good)" opacity="0.07"/>`;
+  [30,50,70].forEach(v=>{
+    const yy = y(v);
+    svg += `<line x1="${PAD.left}" x2="${VB_W-PAD.right}" y1="${yy}" y2="${yy}" stroke="var(--grid)" stroke-width="1" stroke-dasharray="${v===50?'0':'3,3'}"/>`;
+    svg += `<text x="${VB_W-PAD.right+8}" y="${yy+4}" font-size="11" fill="var(--ink-muted)">${v}</text>`;
+  });
+  svg += `<path d="${pathFrom(xs,y,dd.rsi14)}" fill="none" stroke="var(--series-price)" stroke-width="2"/>`;
+  rsiSvg.innerHTML = svg;
+  rsiSvg._xs = xs;
+}
+
+/* ================= MACD chart ================= */
+function renderMacdChart(dd){
+  const nn = dd.dates.length;
+  const xScale = xScaleFor(nn);
+  const [mn, mx] = minMax([dd.macd_line, dd.signal_line, dd.macd_hist]);
+  const span = (mx-mn)||1;
+  const lo = mn - span*0.12, hi = mx + span*0.12;
+  const y = v => PAD.top + (1 - (v-lo)/(hi-lo)) * (VB_H_MACD-PAD.top-PAD.bottom);
+  const xs = dd.dates.map((_,i)=>xScale(i));
+  const barW = Math.max(1.0, (VB_W-PAD.left-PAD.right)/nn*0.6);
+  let svg = '';
+  const zeroY = y(0);
+  svg += `<line x1="${PAD.left}" x2="${VB_W-PAD.right}" y1="${zeroY}" y2="${zeroY}" stroke="var(--axis)" stroke-width="1"/>`;
+  for(let i=0;i<nn;i++){
+    if(dd.macd_hist[i]==null) continue;
+    const v = dd.macd_hist[i];
+    const yy = y(Math.max(0,v)), yy0 = y(Math.min(0,v));
+    svg += `<rect x="${(xs[i]-barW/2).toFixed(2)}" y="${yy.toFixed(2)}" width="${barW.toFixed(2)}" height="${Math.max(0.5,yy0-yy).toFixed(2)}" fill="${v>=0?'var(--good)':'var(--critical)'}" opacity="0.55"/>`;
+  }
+  svg += `<path d="${pathFrom(xs,y,dd.macd_line)}" fill="none" stroke="var(--series-price)" stroke-width="1.8"/>`;
+  svg += `<path d="${pathFrom(xs,y,dd.signal_line)}" fill="none" stroke="var(--series-sma20)" stroke-width="1.8"/>`;
+  macdSvg.innerHTML = svg;
+  macdSvg._xs = xs;
+}
+
+function renderAllCharts(key){
+  const tf = DATA.timeframes[key];
+  activeD = tf.display; activeN = activeD.dates.length;
+  renderPriceChart(tf.display, tf.current);
+  renderRsiChart(tf.display);
+  renderMacdChart(tf.display);
+}
+
+/* ================= timeframe selector ================= */
+const TF_LABELS = {'1d':'日足','8h':'8時間足','4h':'4時間足','1h':'1時間足','15m':'15分足','5m':'5分足'};
+let activeTf = '1d';
+{
+  const row = document.getElementById('tf-row');
+  row.innerHTML = Object.keys(TF_LABELS).map(k=>
+    `<button type="button" class="tf-btn${k===activeTf?' active':''}" data-tf="${k}">${TF_LABELS[k]}</button>`
+  ).join('');
+  row.addEventListener('click', (e)=>{
+    const btn = e.target.closest('.tf-btn');
+    if(!btn) return;
+    activeTf = btn.dataset.tf;
+    row.querySelectorAll('.tf-btn').forEach(b=>b.classList.toggle('active', b===btn));
+    renderAllCharts(activeTf);
+  });
+}
+renderAllCharts(activeTf);
+
+/* ================= crosshair + tooltip ================= */
+const stack = document.getElementById('chart-stack');
+const crosshair = document.getElementById('crosshair');
+const tooltip = document.getElementById('tooltip');
+
+function nearestIndex(clientX, svgEl){
+  const rect = svgEl.getBoundingClientRect();
+  const relX = ((clientX - rect.left) / rect.width) * VB_W;
+  let best = 0, bestDist = Infinity;
+  svgEl._xs.forEach((x,i)=>{ const dist = Math.abs(x-relX); if(dist<bestDist){bestDist=dist; best=i;} });
+  return best;
+}
+
+stack.addEventListener('mousemove', (e)=>{
+  const idx = nearestIndex(e.clientX, priceSvg);
+  const dd = activeD;
+  const stackRect = stack.getBoundingClientRect();
+  const priceRect = priceSvg.getBoundingClientRect();
+  const xPix = (priceSvg._xs[idx]/VB_W) * priceRect.width + (priceRect.left - stackRect.left);
+
+  crosshair.style.left = xPix+'px';
+  crosshair.style.opacity = 1;
+
+  const rsiV = dd.rsi14[idx], macdV = dd.macd_line[idx], sigV = dd.signal_line[idx];
+  tooltip.innerHTML = `
+    <div class="t-date">${dd.dates[idx]}</div>
+    <div class="row"><span>始/高/安/終</span><b class="mono">${fmt(dd.opens[idx])} / ${fmt(dd.highs[idx])} / ${fmt(dd.lows[idx])} / ${fmt(dd.closes[idx])}</b></div>
+    <div class="row"><span>SMA20 / 50 / 200</span><b class="mono">${fmt(dd.sma20[idx])} / ${fmt(dd.sma50[idx])} / ${fmt(dd.sma200[idx])}</b></div>
+    <div class="row"><span>RSI(14)</span><b class="mono">${fmt(rsiV,1)}</b></div>
+    <div class="row"><span>MACD / Signal</span><b class="mono">${fmt(macdV,3)} / ${fmt(sigV,3)}</b></div>
+  `;
+  let left = xPix + 16;
+  if(left + 250 > stackRect.width) left = xPix - 250 - 4;
+  tooltip.style.left = left+'px';
+  tooltip.style.top = '10px';
+  tooltip.style.opacity = 1;
+});
+stack.addEventListener('mouseleave', ()=>{ crosshair.style.opacity=0; tooltip.style.opacity=0; });
+
+/* ================= signal cards ================= */
+function badge(kind, label){ return `<span class="badge ${kind}">${label}</span>`; }
+
+const signals = [];
+
+// MA alignment
+{
+  const bull = cur.close > cur.sma20 && cur.sma20 > cur.sma50 && cur.sma50 > cur.sma200;
+  const bear = cur.close < cur.sma20 && cur.sma20 < cur.sma50 && cur.sma50 < cur.sma200;
+  const kind = bull ? 'bull' : bear ? 'bear' : 'neutral';
+  const label = bull ? '強気(上昇配列)' : bear ? '弱気(下降配列)' : '方向感なし';
+  signals.push({
+    name: '移動平均線(SMA20/50/200)', value: `${cur.sma20.toFixed(2)} / ${cur.sma50.toFixed(2)} / ${cur.sma200.toFixed(2)}`,
+    kind, label,
+    note: bull
+      ? '価格がSMA20・50・200すべての上に位置し、短期>中期>長期の順に並ぶ「パーフェクトオーダー」。中期的な上昇トレンド継続を示唆。'
+      : bear
+      ? '価格が主要移動平均線をすべて下回り、下降トレンドを示唆。'
+      : '移動平均線が交錯しており、方向感に乏しい局面。'
+  });
+}
+// RSI
+{
+  const v = cur.rsi14;
+  const kind = v>=70 ? 'bear' : v<=30 ? 'bull' : 'neutral';
+  const label = v>=70 ? '買われすぎ(過熱)' : v<=30 ? '売られすぎ' : '中立';
+  signals.push({
+    name: 'RSI(14)', value: v.toFixed(1), kind, label,
+    note: v>=70
+      ? '70を上回り短期的な過熱感が強い。トレンド継続中でもこの水準では戻り(調整)が入りやすい。'
+      : v<=30
+      ? '30を下回り売られすぎ水準。自律反発が入りやすい局面。'
+      : '中立圏で推移しており、明確な過熱・売られすぎ感はない。'
+  });
+}
+// MACD
+{
+  const bull = cur.macd > cur.macd_signal && cur.macd_hist > 0;
+  const bear = cur.macd < cur.macd_signal && cur.macd_hist < 0;
+  const kind = bull ? 'bull' : bear ? 'bear' : 'neutral';
+  const label = bull ? '強気(GC後・拡大)' : bear ? '弱気(DC後・拡大)' : '方向感なし';
+  signals.push({
+    name: 'MACD(12,26,9)', value: `${cur.macd.toFixed(3)} / ${cur.macd_signal.toFixed(3)}`, kind, label,
+    note: bull
+      ? 'MACD線がシグナル線を上回りヒストグラムもプラスで、短期モメンタムは上向き。'
+      : bear
+      ? 'MACD線がシグナル線を下回りヒストグラムもマイナスで、短期モメンタムは下向き。'
+      : 'MACD線とシグナル線が接近しており、モメンタムが弱含み。'
+  });
+}
+// Bollinger
+{
+  const above = cur.close > cur.bb_upper;
+  const below = cur.close < cur.bb_lower;
+  const kind = above ? 'bear' : below ? 'bull' : 'neutral';
+  const label = above ? '上限突破(過熱)' : below ? '下限突破(売られすぎ)' : 'バンド内(通常圏)';
+  signals.push({
+    name: 'ボリンジャーバンド(20,2σ)', value: `上限 ${cur.bb_upper.toFixed(2)} / 下限 ${cur.bb_lower.toFixed(2)}`, kind, label,
+    note: above
+      ? '終値が+2σ(上限)を上回り、統計的にはかなり伸びた状態。トレンド加速のサインとも、行き過ぎのサインとも解釈できる。'
+      : below
+      ? '終値が−2σ(下限)を下回り、統計的に売られすぎの水準。'
+      : 'バンド内で推移しており、ボラティリティは平常の範囲内。'
+  });
+}
+// Support/Resistance
+{
+  const atHigh = cur.close >= cur.res60;
+  signals.push({
+    name: 'サポート・レジスタンス', value: `R ${cur.res60.toFixed(2)} / S ${cur.sup60.toFixed(2)}`,
+    kind: atHigh ? 'bear' : 'neutral',
+    label: atHigh ? '60日高値圏' : 'レンジ内',
+    note: atHigh
+      ? '直近60営業日の高値を更新中。次の抵抗の目安が乏しく、上値を追いやすい半面、達成感からの反落にも注意。'
+      : `直近では ${cur.sup20.toFixed(2)} 円 付近がサポート、${cur.res20.toFixed(2)} 円 付近がレジスタンスの目安。`
+  });
+}
+
+document.getElementById('signals-grid').innerHTML = signals.map(s => `
+  <div class="sig-card">
+    <div class="sig-name">${s.name}</div>
+    <div class="sig-value mono">${s.value}</div>
+    ${badge(s.kind, s.label)}
+    <div class="sig-note">${s.note}</div>
+  </div>
+`).join('');
+
+/* ================= fundamentals (data-driven) ================= */
+{
+  const fd = DATA.fundamentals;
+  if(fd){
+    document.getElementById('fundamentals-desc').textContent = `${fd.asof}時点の報道・公開情報に基づく要約です。`;
+    document.getElementById('fundamentals-grid').innerHTML = fd.cards.map(c => `
+      <div class="sig-card">
+        <div class="sig-name">${c.name}</div>
+        ${badge(c.kind, c.label)}
+        <div class="sig-note">${c.note}</div>
+      </div>
+    `).join('');
+    document.getElementById('fundamentals-synthesis').innerHTML = `<p style="margin:0">${fd.synthesis}</p>`;
+    document.getElementById('fundamentals-sources').innerHTML = '情報源: ' + fd.sources.map(s =>
+      `<a href="${s.url}" target="_blank" rel="noopener">${s.title}</a>`
+    ).join(', ');
+  }
+}
+
+/* ================= backtest table ================= */
+const btMeta = {
+  ma_cross_5_20: {name:'移動平均クロス', sub:'SMA5 / SMA20 ゴールデン・デッドクロス'},
+  rsi_reversion_14: {name:'RSI逆張り', sub:'RSI14が30/70を上抜け・下抜け'},
+  macd_cross: {name:'MACDクロス', sub:'MACD線とシグナル線のクロス'},
+  bollinger_touch: {name:'ボリンジャータッチ', sub:'終値が±2σバンドに到達'},
+  double_pattern: {name:'ダブルトップ/ボトム', sub:'2つの高値・安値+ネックライン突破で確定'},
+};
+const wcls = w => w==null ? '' : (w>=50 ? 'win-pos' : 'win-neg');
+function dirRow(strategyName, sub, dirLabel, dirClass, b, count){
+  const r1 = b['1'], r5 = b['5'];
+  return `<tr>
+    <td class="strategy-name">${strategyName}<span class="strategy-sub">${sub}</span></td>
+    <td><span class="dir-chip ${dirClass}">${dirLabel}</span></td>
+    <td class="num mono">${count}</td>
+    <td class="num mono ${wcls(r1.win_rate)}">${r1.win_rate!=null?r1.win_rate+'%':'—'}</td>
+    <td class="num mono">${r1.avg_return_pct!=null ? (r1.avg_return_pct>0?'+':'')+r1.avg_return_pct+'%' : '—'}</td>
+    <td class="num mono ${wcls(r5.win_rate)}">${r5.win_rate!=null?r5.win_rate+'%':'—'}</td>
+    <td class="num mono">${r5.avg_return_pct!=null ? (r5.avg_return_pct>0?'+':'')+r5.avg_return_pct+'%' : '—'}</td>
+  </tr>`;
+}
+const btRows = Object.keys(btMeta).map(key=>{
+  const b = DATA.backtest[key];
+  return dirRow(btMeta[key].name, btMeta[key].sub, '買い', 'buy', b.buy, b.buy_count)
+       + dirRow(btMeta[key].name, btMeta[key].sub, '売り', 'sell', b.sell, b.sell_count);
+}).join('');
+document.querySelector('#backtest-table tbody').innerHTML = btRows;
+
+/* ================= synthesis (fully data-driven) ================= */
+{
+  const maFlag = signals[0].kind, rsiFlag = signals[1].kind, bbFlag = signals[3].kind, srFlag = signals[4].kind;
+
+  const midTermLabel = maFlag==='bull' ? '中期: 強気(上昇トレンド)' : maFlag==='bear' ? '中期: 弱気(下降トレンド)' : '中期: 方向感なし';
+  const hot = rsiFlag==='bear' || bbFlag==='bear';
+  const cold = rsiFlag==='bull' || bbFlag==='bull';
+  const shortTermLabel = hot ? '短期: 過熱感に注意' : cold ? '短期: 売られすぎで反発警戒' : '短期: 過熱感なし';
+  const shortTermKind = hot ? 'bear' : cold ? 'bull' : 'neutral';
+
+  const maText = maFlag==='bull'
+    ? `移動平均線は<strong>短期(SMA20)&gt;中期(SMA50)&gt;長期(SMA200)</strong>の順に並ぶ「パーフェクトオーダー」で、終値もすべての移動平均線の上にあり、中期的な上昇トレンドは崩れていません。`
+    : maFlag==='bear'
+    ? `移動平均線は<strong>短期(SMA20)&lt;中期(SMA50)&lt;長期(SMA200)</strong>の順に並ぶ下降配列で、終値も主要な移動平均線を下回っており、中期的な下降トレンドが継続しています。`
+    : `移動平均線(SMA20/50/200)が交錯しており、明確な方向感に乏しい局面です。`;
+
+  const stretchParts = [];
+  if(rsiFlag==='bear') stretchParts.push(`RSI(14)は${fmt(cur.rsi14,1)}と70を上回り過熱感が強い状態です`);
+  else if(rsiFlag==='bull') stretchParts.push(`RSI(14)は${fmt(cur.rsi14,1)}と30を下回り売られすぎの状態です`);
+  else stretchParts.push(`RSI(14)は${fmt(cur.rsi14,1)}と中立圏です`);
+  if(bbFlag==='bear') stretchParts.push(`終値はボリンジャーバンドの+2σ(${cur.bb_upper.toFixed(2)}円)を上回っています`);
+  else if(bbFlag==='bull') stretchParts.push(`終値はボリンジャーバンドの−2σ(${cur.bb_lower.toFixed(2)}円)を下回っています`);
+  else stretchParts.push(`終値はボリンジャーバンド(${cur.bb_lower.toFixed(2)}〜${cur.bb_upper.toFixed(2)}円)の内側で推移しています`);
+  if(srFlag==='bear') stretchParts.push(`直近60営業日の高値も更新中です`);
+  const stretchText = stretchParts.join('、また') + '。';
+
+  const stratList = Object.keys(btMeta).map(key=>({key, name:btMeta[key].name, ...DATA.backtest[key]}));
+  function bestWorst(h){
+    const withRate = stratList.filter(s=>s.combined[h].win_rate!=null);
+    const best = withRate.reduce((a,b)=> b.combined[h].win_rate>a.combined[h].win_rate?b:a);
+    const worst = withRate.reduce((a,b)=> b.combined[h].win_rate<a.combined[h].win_rate?b:a);
+    const countAbove50 = withRate.filter(s=>s.combined[h].win_rate>=50).length;
+    return {best, worst, countAbove50, total: withRate.length};
+  }
+  const bw1 = bestWorst('1'), bw5 = bestWorst('5');
+  const sigCounts = stratList.map(s=>s.signals);
+
+  // 最も勝率が高かった買い/売りシグナル(サンプル数20件以上に限定して信頼性を確保)
+  const MIN_SAMPLE = 20;
+  const candidates = [];
+  stratList.forEach(s=>{
+    ['buy','sell'].forEach(dir=>{
+      ['1','5'].forEach(h=>{
+        const r = s[dir][h];
+        if(r.win_rate!=null && r.count>=MIN_SAMPLE){
+          candidates.push({name:s.name, dir, dirLabel: dir==='buy'?'買い':'売り', horizon:h, ...r});
+        }
+      });
+    });
+  });
+  const topSignal = candidates.length ? candidates.reduce((a,b)=> b.win_rate>a.win_rate?b:a) : null;
+
+  const backtestText = `過去${DATA.history_range.n}営業日の実データで、逆張り・クロス系の代表的な4手法を機械的にバックテストしたところ(買い・売り両シグナルの合算)、`+
+    `1日後ベースでは4手法中<strong>${bw1.countAbove50}件</strong>が勝率50%以上(最高は${bw1.best.name}の${bw1.best.combined['1'].win_rate}%、最低は${bw1.worst.name}の${bw1.worst.combined['1'].win_rate}%)、`+
+    `1週間後ベースでは<strong>${bw5.countAbove50}件</strong>が勝率50%以上(最高は${bw5.best.name}の${bw5.best.combined['5'].win_rate}%、最低は${bw5.worst.name}の${bw5.worst.combined['5'].win_rate}%)という結果でした。`+
+    `シグナル数は${Math.min(...sigCounts)}〜${Math.max(...sigCounts)}件と少なく統計的な誤差が大きい点には注意が必要ですが、単純な「シグナル通りに売買する」戦略に明確で一貫した優位性は確認できませんでした。買い・売り別の内訳は下表をご覧ください。`;
+
+  const trendAdviceText = maFlag==='bull'
+    ? `現在は移動平均が強気配列にあるため、過去データ上は逆張りよりも押し目(SMA20/50付近への調整)を待ってトレンド方向(上)に沿うほうが分がよかった可能性があります。`
+    : maFlag==='bear'
+    ? `現在は移動平均が弱気配列にあるため、過去データ上は逆張りよりも戻り(SMA20/50付近への戻し)を待ってトレンド方向(下)に沿うほうが分がよかった可能性があります。`
+    : `現在は移動平均が交錯しており、トレンドフォロー・逆張りいずれについても過去データからの明確な優位性は見出しにくい局面です。`;
+
+  document.getElementById('synthesis').innerHTML = `
+    <div class="verdict-row">
+      ${badge(maFlag, midTermLabel)}
+      ${badge(shortTermKind, shortTermLabel)}
+    </div>
+    <p>${maText} 一方で${stretchText}</p>
+    ${topSignal ? `
+    <div class="top-signal-box">
+      <div class="ts-label">過去${DATA.history_range.n}営業日で最も勝率が高かったシグナル(サンプル${MIN_SAMPLE}件以上)</div>
+      <div class="ts-value">${topSignal.name}(${topSignal.dirLabel}) <span class="mono">${topSignal.win_rate}%</span> <span class="ts-sub">${topSignal.horizon==='1'?'1日後':'1週間後'}時点 / ${topSignal.count}件 / 平均${topSignal.avg_return_pct>0?'+':''}${topSignal.avg_return_pct}%</span></div>
+    </div>` : ''}
+    <h3>過去データからの示唆</h3>
+    <p>${backtestText}</p>
+    <div class="scenario-grid">
+      <div class="scenario">
+        <div class="sc-title">① 1日程度の売買(朝方エントリー・夕方以降決済)</div>
+        <p style="margin:0">1日後ベースで最も勝率が高かったのは<strong>${bw1.best.name}(${bw1.best.combined['1'].win_rate}%、平均${bw1.best.combined['1'].avg_return_pct>0?'+':''}${bw1.best.combined['1'].avg_return_pct}%)</strong>でしたが、いずれの手法も平均リターンは小さく、単独の指標シグナルに大きな優位性は見出しにくい結果です。短期ではニュース・要人発言などイベントドリブンな値動きの影響も大きくなりやすい点に留意してください。</p>
+      </div>
+      <div class="scenario">
+        <div class="sc-title">② 1週間程度の保有</div>
+        <p style="margin:0">1週間後ベースで最も勝率が高かったのは<strong>${bw5.best.name}(${bw5.best.combined['5'].win_rate}%、平均${bw5.best.combined['5'].avg_return_pct>0?'+':''}${bw5.best.combined['5'].avg_return_pct}%)</strong>でした。${trendAdviceText}ただし現在の過熱・売られすぎ状況(上記参照)は高値・安値掴みのリスクも伴うため、割り引いて考える必要があります。</p>
+      </div>
+    </div>
+    <h3>注視すべき水準</h3>
+    <ul>
+      <li>上値: ${cur.res60.toFixed(2)}円付近(直近60営業日高値)を上抜けられるかが焦点。</li>
+      <li>下値: まず${cur.sup20.toFixed(2)}円(20日安値)、崩れた場合は${cur.sup60.toFixed(2)}円(60日安値)が下値の目安。</li>
+      ${DATA.recent_pattern ? `<li>チャートパターン: ${DATA.recent_pattern.date}に<strong>${DATA.recent_pattern.type}</strong>が直近で確定しています。</li>` : `<li>チャートパターン: 直近15営業日以内に確定したダブルトップ/ダブルボトムはありません。</li>`}
+    </ul>
+  `;
+}
+</script>
