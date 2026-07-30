@@ -454,6 +454,7 @@ def compute_trades(current_close):
         exit_time = t.get("exit_time")
         exit_price = t.get("exit_price")
         qty = t.get("qty")
+        lot = t.get("lot")
         if not entry_time or entry_price is None:
             continue
         sign = 1 if direction == "buy" else -1
@@ -465,7 +466,7 @@ def compute_trades(current_close):
             pnl_jpy = round((mark_price - entry_price) * qty * sign)
         trades.append({
             "direction": direction, "entry_time": entry_time, "entry_price": entry_price,
-            "exit_time": exit_time, "exit_price": exit_price, "qty": qty,
+            "exit_time": exit_time, "exit_price": exit_price, "qty": qty, "lot": lot,
             "closed": closed, "pnl_pct": round(pnl_pct, 3), "pnl_jpy": pnl_jpy,
         })
     trades.sort(key=lambda t: t["entry_time"], reverse=True)

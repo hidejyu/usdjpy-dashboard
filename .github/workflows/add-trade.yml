@@ -36,25 +36,35 @@ jobs:
 
             const directionJa = field('方向');
             const direction = directionJa === '買い' ? 'buy' : 'sell';
-            const entryTime = field('約定日時(日本時間)');
+            const lot = parseFloat(field('Lot数(1lot=100,000通貨)'));
+            const entryDate = field('約定日(日本時間)');
+            const entryHour = field('約定時刻(時・24時間表記)');
+            const entryMinute = field('約定時刻(分)');
             const entryPriceRaw = field('約定価格');
-            const exitTime = field('決済日時(日本時間・未決済なら空欄)');
+            const closedJa = field('決済状況');
+            const isClosed = closedJa === '決済済み';
+            const exitDate = field('決済日(日本時間・未決済なら空欄)');
+            const exitHour = field('決済時刻(時・未決済なら選択不要)');
+            const exitMinute = field('決済時刻(分・未決済なら選択不要)');
             const exitPriceRaw = field('決済価格(未決済なら空欄)');
-            const qtyRaw = field('数量(USD建て・任意。入力すると円損益も計算)');
 
             const entryPrice = parseFloat(entryPriceRaw);
-            if (!entryTime || isNaN(entryPrice)) {
-              core.setFailed('Required fields missing or invalid: entry_time=' + entryTime + ' entry_price=' + entryPriceRaw);
+            if (!entryDate || !entryHour || !entryMinute || isNaN(entryPrice) || isNaN(lot)) {
+              core.setFailed('Required fields missing or invalid: entryDate=' + entryDate + ' entryHour=' + entryHour + ' entryMinute=' + entryMinute + ' entryPrice=' + entryPriceRaw + ' lot=' + lot);
               return;
             }
+            const entryTime = `${entryDate} ${entryHour}:${entryMinute}`;
+            const exitTime = (isClosed && exitDate && exitHour && exitMinute) ? `${exitDate} ${exitHour}:${exitMinute}` : null;
+            const exitPrice = (isClosed && exitPriceRaw) ? parseFloat(exitPriceRaw) : null;
 
             const trade = {
               direction: direction,
               entry_time: entryTime,
               entry_price: entryPrice,
-              exit_time: exitTime || null,
-              exit_price: exitTime && exitPriceRaw ? parseFloat(exitPriceRaw) : null,
-              qty: qtyRaw ? parseFloat(qtyRaw) : null
+              exit_time: exitTime,
+              exit_price: exitPrice,
+              qty: Math.round(lot * 100000),
+              lot: lot
             };
 
             let trades = [];

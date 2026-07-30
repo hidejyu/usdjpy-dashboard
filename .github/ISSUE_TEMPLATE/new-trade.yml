@@ -4,6 +4,14 @@ title: "[取引] "
 labels: ["trade"]
 body:
   - type: dropdown
+    id: pair
+    attributes:
+      label: 通貨ペア
+      options:
+        - USD/JPY
+    validations:
+      required: true
+  - type: dropdown
     id: direction
     attributes:
       label: 方向
@@ -12,39 +20,86 @@ body:
         - 売り
     validations:
       required: true
-  - type: input
-    id: entry_time
+  - type: dropdown
+    id: lot
     attributes:
-      label: 約定日時(日本時間)
-      description: "形式: YYYY-MM-DD HH:MM"
-      placeholder: "2026-07-30 09:00"
+      label: Lot数(1lot=100,000通貨)
+      options:
+        - "0.01"
+        - "0.05"
+        - "0.1"
+        - "0.5"
+        - "1"
+        - "2"
+        - "3"
+        - "5"
+        - "10"
     validations:
       required: true
-  - type: number
+  - type: input
+    id: entry_date
+    attributes:
+      label: 約定日(日本時間)
+      description: "形式: YYYY-MM-DD"
+      placeholder: "2026-07-30"
+    validations:
+      required: true
+  - type: dropdown
+    id: entry_hour
+    attributes:
+      label: 約定時刻(時・24時間表記)
+      options: ["00","01","02","03","04","05","06","07","08","09","10","11","12","13","14","15","16","17","18","19","20","21","22","23"]
+    validations:
+      required: true
+  - type: dropdown
+    id: entry_minute
+    attributes:
+      label: 約定時刻(分)
+      options: ["00","15","30","45"]
+    validations:
+      required: true
+  - type: input
     id: entry_price
     attributes:
       label: 約定価格
       placeholder: "163.50"
     validations:
       required: true
-  - type: input
-    id: exit_time
+  - type: dropdown
+    id: closed
     attributes:
-      label: 決済日時(日本時間・未決済なら空欄)
-      placeholder: "2026-07-30 15:00"
+      label: 決済状況
+      options:
+        - 未決済(保有中)
+        - 決済済み
+    validations:
+      required: true
+  - type: input
+    id: exit_date
+    attributes:
+      label: 決済日(日本時間・未決済なら空欄)
+      description: "形式: YYYY-MM-DD"
+      placeholder: "2026-07-30"
     validations:
       required: false
-  - type: number
+  - type: dropdown
+    id: exit_hour
+    attributes:
+      label: 決済時刻(時・未決済なら選択不要)
+      options: ["","00","01","02","03","04","05","06","07","08","09","10","11","12","13","14","15","16","17","18","19","20","21","22","23"]
+    validations:
+      required: false
+  - type: dropdown
+    id: exit_minute
+    attributes:
+      label: 決済時刻(分・未決済なら選択不要)
+      options: ["","00","15","30","45"]
+    validations:
+      required: false
+  - type: input
     id: exit_price
     attributes:
       label: 決済価格(未決済なら空欄)
       placeholder: "163.80"
-    validations:
-      required: false
-  - type: number
-    id: qty
-    attributes:
-      label: 数量(USD建て・任意。入力すると円損益も計算)
-      placeholder: "10000"
     validations:
       required: false
