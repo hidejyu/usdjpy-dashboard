@@ -356,6 +356,21 @@ for i in range(1, n):
 
 double_signals = detect_double_patterns(closes, highs, lows, n)
 
+# ---------- confluence: 2+ of {MA cross, RSI reversion, MACD cross, BB touch} agree same day ----------
+by_day = {}
+for name, sigs in [("ma", ma_signals), ("rsi", rsi_signals), ("macd", macd_signals), ("bb", bb_signals)]:
+    for idx, d in sigs:
+        by_day.setdefault(idx, {}).setdefault(d, []).append(name)
+CONFLUENCE_LABELS = {"ma": "移動平均クロス", "rsi": "RSI逆張り", "macd": "MACDクロス", "bb": "ボリンジャータッチ"}
+confluence_signals = []
+confluence_detail = {}
+for idx, dirs in by_day.items():
+    for d, names in dirs.items():
+        if len(names) >= 2:
+            confluence_signals.append((idx, d))
+            confluence_detail[(idx, d)] = names
+confluence_signals.sort(key=lambda s: s[0])
+
 latest_i = n - 1
 latest_dt_utc = datetime.fromtimestamp(raw_ts[latest_i], tz=timezone.utc)
 latest_dt_jst = latest_dt_utc.astimezone(JST)
@@ -390,6 +405,16 @@ for idx, direction in reversed(double_signals):
         recent_pattern = {"date": dates[idx], "type": "ダブルボトム(買い)" if direction == 1 else "ダブルトップ(売り)"}
         break
 
+confluence_today = None
+for direction in (1, -1):
+    key = (latest_i, direction)
+    if key in confluence_detail:
+        confluence_today = {
+            "direction": "買い" if direction == 1 else "売り",
+            "matched": [CONFLUENCE_LABELS[nm] for nm in confluence_detail[key]],
+        }
+        break
+
 output = {
     "display": display,
     "backtest": {
@@ -398,8 +423,10 @@ output = {
         "macd_cross": {"signals": len(macd_signals), **backtest_signals(closes, macd_signals)},
         "bollinger_touch": {"signals": len(bb_signals), **backtest_signals(closes, bb_signals)},
         "double_pattern": {"signals": len(double_signals), **backtest_signals(closes, double_signals)},
+        "confluence_2plus": {"signals": len(confluence_signals), **backtest_signals(closes, confluence_signals)},
     },
     "recent_pattern": recent_pattern,
+    "confluence_today": confluence_today,
     "current": current,
     "day_change": round(day_change, 3),
     "day_change_pct": round(day_change_pct, 3),

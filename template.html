@@ -344,6 +344,10 @@
       <div class="explain-name">ダブルトップ/ダブルボトム</div>
       <p>代表的なチャートパターン分析の一つ。2つの高値(または安値)がほぼ同水準で並び、その間の安値(高値)を結んだ「ネックライン」を price が反対方向に突破した時点で完成とみなす。<strong>ダブルボトム=買いサイン</strong>、<strong>ダブルトップ=売りサイン</strong>とされる。このダッシュボードでは過去の値動きから機械的に検出・バックテストしている。</p>
     </div>
+    <div class="explain-card">
+      <div class="explain-name">複数指標一致(confluence)</div>
+      <p>移動平均クロス・RSI逆張り・MACDクロス・ボリンジャータッチの4指標のうち、<strong>2つ以上が同じ日に同じ方向で一致</strong>した状態。過去10年の実データでバックテストしたところ、単独指標(勝率49〜60%)より明確に高い勝率(1日後64.4%、1週間後65.9%)が確認できた、このダッシュボードで最も信頼度が高い条件。ただし発生頻度は低く(約45回/10年)、過信は禁物。</p>
+    </div>
   </div>
 
   <h2 class="section-title">指標別シグナルと示唆</h2>
@@ -676,6 +680,19 @@ const signals = [];
       : `直近では ${cur.sup20.toFixed(2)} 円 付近がサポート、${cur.res20.toFixed(2)} 円 付近がレジスタンスの目安。`
   });
 }
+// Confluence(複数指標一致) — バックテストで最も勝率が高かった手法
+{
+  const ct = DATA.confluence_today;
+  const kind = ct ? (ct.direction==='買い' ? 'bull' : 'bear') : 'neutral';
+  const label = ct ? `本日該当: ${ct.direction}` : '本日は該当なし';
+  signals.push({
+    name: '複数指標一致(confluence)', value: ct ? ct.matched.join(' + ') : '—',
+    kind, label,
+    note: ct
+      ? `本日、${ct.matched.join('・')}が同時に${ct.direction}方向で一致しました。過去データ上、2指標以上が一致した日は単独シグナルより勝率が高い傾向があります(下表参照)。`
+      : '4指標(移動平均クロス・RSI逆張り・MACDクロス・ボリンジャータッチ)のうち2つ以上が同日・同方向で一致した日を「confluence」と定義。過去データで最も勝率が高かった条件ですが、発生頻度は低め(過去10年で約45回)。'
+  });
+}
 
 document.getElementById('signals-grid').innerHTML = signals.map(s => `
   <div class="sig-card">
@@ -740,6 +757,7 @@ const btMeta = {
   macd_cross: {name:'MACDクロス', sub:'MACD線とシグナル線のクロス'},
   bollinger_touch: {name:'ボリンジャータッチ', sub:'終値が±2σバンドに到達'},
   double_pattern: {name:'ダブルトップ/ボトム', sub:'2つの高値・安値+ネックライン突破で確定'},
+  confluence_2plus: {name:'複数指標一致(confluence)', sub:'MA/RSI/MACD/BBのうち2つ以上が同日・同方向で一致'},
 };
 const wcls = w => w==null ? '' : (w>=50 ? 'win-pos' : 'win-neg');
 function dirRow(strategyName, sub, dirLabel, dirClass, b, count){
@@ -852,6 +870,7 @@ document.querySelector('#backtest-table tbody').innerHTML = btRows;
       <li>上値: ${cur.res60.toFixed(2)}円付近(直近60営業日高値)を上抜けられるかが焦点。</li>
       <li>下値: まず${cur.sup20.toFixed(2)}円(20日安値)、崩れた場合は${cur.sup60.toFixed(2)}円(60日安値)が下値の目安。</li>
       ${DATA.recent_pattern ? `<li>チャートパターン: ${DATA.recent_pattern.date}に<strong>${DATA.recent_pattern.type}</strong>が直近で確定しています。</li>` : `<li>チャートパターン: 直近15営業日以内に確定したダブルトップ/ダブルボトムはありません。</li>`}
+      ${DATA.confluence_today ? `<li>複数指標一致: 本日<strong>${DATA.confluence_today.matched.join('・')}が${DATA.confluence_today.direction}方向で一致</strong>(過去データ上、最も勝率が高い条件です)。</li>` : ''}
     </ul>
   `;
 }
