@@ -297,6 +297,26 @@
     </div>
   </div>
 
+  <h2 class="section-title">自分の取引履歴</h2>
+  <p class="section-desc" id="trades-desc"></p>
+  <div class="table-wrap">
+    <table id="trades-table">
+      <thead>
+        <tr>
+          <th>方向</th>
+          <th>約定日時</th>
+          <th class="num">約定価格</th>
+          <th>決済日時</th>
+          <th class="num">決済価格</th>
+          <th>状態</th>
+          <th class="num">損益(%)</th>
+          <th class="num">損益(円)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
   <h2 class="section-title">テクニカル指標の解説</h2>
   <p class="section-desc">このダッシュボードで使用している指標の意味と読み方です。</p>
   <div class="explain-grid">
@@ -665,6 +685,34 @@ document.getElementById('signals-grid').innerHTML = signals.map(s => `
     <div class="sig-note">${s.note}</div>
   </div>
 `).join('');
+
+/* ================= trade history (data-driven) ================= */
+{
+  const trades = DATA.trades || [];
+  const editUrl = DATA.trades_edit_url;
+  const link = editUrl ? `<a href="${editUrl}" target="_blank" rel="noopener">GitHubで取引を追加・編集(trades.json)</a>` : '';
+  document.getElementById('trades-desc').innerHTML =
+    `約定(エントリー)・決済(エグジット)を記録すると、損益を自動計算して一覧表示します。未決済の場合は最新終値での含み損益です。${link}`;
+  if(trades.length === 0){
+    document.querySelector('#trades-table tbody').innerHTML =
+      `<tr><td colspan="8" style="text-align:center;color:var(--ink-muted);">まだ取引記録がありません。${link}</td></tr>`;
+  } else {
+    document.querySelector('#trades-table tbody').innerHTML = trades.map(t => {
+      const pnlCls = t.pnl_pct > 0 ? 'win-pos' : t.pnl_pct < 0 ? 'win-neg' : '';
+      const statusBadge = t.closed ? badge('neutral','確定') : badge('bull','保有中(含み損益)');
+      return `<tr>
+        <td><span class="dir-chip ${t.direction==='buy'?'buy':'sell'}">${t.direction==='buy'?'買い':'売り'}</span></td>
+        <td class="mono">${t.entry_time}</td>
+        <td class="num mono">${fmt(t.entry_price)}</td>
+        <td class="mono">${t.exit_time || '—'}</td>
+        <td class="num mono">${t.exit_price!=null ? fmt(t.exit_price) : '—'}</td>
+        <td>${statusBadge}</td>
+        <td class="num mono ${pnlCls}">${t.pnl_pct>0?'+':''}${t.pnl_pct}%</td>
+        <td class="num mono ${pnlCls}">${t.pnl_jpy!=null ? (t.pnl_jpy>0?'+':'')+t.pnl_jpy.toLocaleString()+'円' : '—'}</td>
+      </tr>`;
+    }).join('');
+  }
+}
 
 /* ================= fundamentals (data-driven) ================= */
 {

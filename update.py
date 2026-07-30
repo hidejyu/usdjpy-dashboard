@@ -413,6 +413,40 @@ try:
 except FileNotFoundError:
     pass
 
+def compute_trades(current_close):
+    try:
+        with open("trades.json", encoding="utf-8-sig") as f:
+            raw_trades = json.load(f)
+    except FileNotFoundError:
+        raw_trades = []
+    trades = []
+    for t in raw_trades:
+        direction = t.get("direction", "buy")
+        entry_time = t.get("entry_time")
+        entry_price = t.get("entry_price")
+        exit_time = t.get("exit_time")
+        exit_price = t.get("exit_price")
+        qty = t.get("qty")
+        if not entry_time or entry_price is None:
+            continue
+        sign = 1 if direction == "buy" else -1
+        closed = bool(exit_time and exit_price is not None)
+        mark_price = exit_price if closed else current_close
+        pnl_pct = (mark_price - entry_price) / entry_price * 100 * sign
+        pnl_jpy = None
+        if qty:
+            pnl_jpy = round((mark_price - entry_price) * qty * sign)
+        trades.append({
+            "direction": direction, "entry_time": entry_time, "entry_price": entry_price,
+            "exit_time": exit_time, "exit_price": exit_price, "qty": qty,
+            "closed": closed, "pnl_pct": round(pnl_pct, 3), "pnl_jpy": pnl_jpy,
+        })
+    trades.sort(key=lambda t: t["entry_time"], reverse=True)
+    return trades
+
+output["trades"] = compute_trades(current["close"])
+output["trades_edit_url"] = "https://github.com/hidejyu/usdjpy-dashboard/edit/main/trades.json"
+
 with open("template.html", encoding="utf-8") as f:
     template = f.read()
 
