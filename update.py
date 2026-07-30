@@ -472,7 +472,7 @@ def compute_trades(current_close):
     return trades
 
 output["trades"] = compute_trades(current["close"])
-output["trades_edit_url"] = "https://github.com/hidejyu/usdjpy-dashboard/edit/main/trades.json"
+output["trades_edit_url"] = "https://github.com/hidejyu/usdjpy-dashboard/issues/new?template=new-trade.yml"
 
 with open("template.html", encoding="utf-8") as f:
     template = f.read()

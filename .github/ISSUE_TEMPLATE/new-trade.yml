@@ -1,0 +1,50 @@
+name: 取引を追加
+description: USD/JPYの売買記録をダッシュボードに追加します
+title: "[取引] "
+labels: ["trade"]
+body:
+  - type: dropdown
+    id: direction
+    attributes:
+      label: 方向
+      options:
+        - 買い
+        - 売り
+    validations:
+      required: true
+  - type: input
+    id: entry_time
+    attributes:
+      label: 約定日時(日本時間)
+      description: "形式: YYYY-MM-DD HH:MM"
+      placeholder: "2026-07-30 09:00"
+    validations:
+      required: true
+  - type: number
+    id: entry_price
+    attributes:
+      label: 約定価格
+      placeholder: "163.50"
+    validations:
+      required: true
+  - type: input
+    id: exit_time
+    attributes:
+      label: 決済日時(日本時間・未決済なら空欄)
+      placeholder: "2026-07-30 15:00"
+    validations:
+      required: false
+  - type: number
+    id: exit_price
+    attributes:
+      label: 決済価格(未決済なら空欄)
+      placeholder: "163.80"
+    validations:
+      required: false
+  - type: number
+    id: qty
+    attributes:
+      label: 数量(USD建て・任意。入力すると円損益も計算)
+      placeholder: "10000"
+    validations:
+      required: false

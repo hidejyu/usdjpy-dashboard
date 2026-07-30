@@ -707,7 +707,7 @@ document.getElementById('signals-grid').innerHTML = signals.map(s => `
 {
   const trades = DATA.trades || [];
   const editUrl = DATA.trades_edit_url;
-  const link = editUrl ? `<a href="${editUrl}" target="_blank" rel="noopener">GitHubで取引を追加・編集(trades.json)</a>` : '';
+  const link = editUrl ? `<a href="${editUrl}" target="_blank" rel="noopener">+ 取引を記録する(フォーム)</a>` : '';
   document.getElementById('trades-desc').innerHTML =
     `約定(エントリー)・決済(エグジット)を記録すると、損益を自動計算して一覧表示します。未決済の場合は最新終値での含み損益です。${link}`;
   if(trades.length === 0){
