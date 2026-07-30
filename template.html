@@ -409,7 +409,7 @@ function css(v){ return getComputedStyle(document.documentElement).getPropertyVa
   document.getElementById('chart-desc').textContent = `時間足を切り替えて表示できます。マウスを重ねると各足の値を確認できます。`;
   document.getElementById('backtest-desc').innerHTML =
     `過去${DATA.history_range.n}営業日の実データに、各指標の教科書的な売買ルールを機械的に適用した場合の勝率・平均リターンを、<strong>買いシグナルと売りシグナルに分けて</strong>集計しています。`+
-    `「1日」は翌営業日終値までの成績(朝方の売買を想定)、「1週間」は5営業日後終値までの成績です。`;
+    `「1日」は終値(日本時間 朝8時頃)から翌営業日終値までの成績(約24時間保有)、「1週間」は5営業日後終値までの成績(約5営業日保有)です。日中だけの値動きではなく、日をまたいだ保有を前提にしている点にご注意ください。`;
   document.getElementById('footer-note').innerHTML =
     `データ出所: Yahoo Finance(USD/JPY 日次OHLC)。実勢のブローカー気配やスプレッドとは若干異なる場合があります。<br>`+
     `バックテストは「移動平均クロス」「RSI逆張り」「MACDクロス」「ボリンジャーバンドタッチ」という教科書的な単純ルールを終値ベースで機械適用したものです。手数料・スプレッド・スリッページは考慮しておらず、シグナル数が少ない手法は統計的な誤差が大きい点にご留意ください。過去の成績は将来の成果を保証するものではありません。<br>`+
@@ -859,7 +859,7 @@ document.querySelector('#backtest-table tbody').innerHTML = btRows;
     <p>${backtestText}</p>
     <div class="scenario-grid">
       <div class="scenario">
-        <div class="sc-title">① 1日程度の売買(朝方エントリー・夕方以降決済)</div>
+        <div class="sc-title">① 1日程度の保有(終値〜翌営業日終値、約24時間)</div>
         <p style="margin:0">1日後ベースで最も勝率が高かったのは<strong>${bw1.best.name}(${bw1.best.combined['1'].win_rate}%、平均${bw1.best.combined['1'].avg_return_pct>0?'+':''}${bw1.best.combined['1'].avg_return_pct}%)</strong>でしたが、いずれの手法も平均リターンは小さく、単独の指標シグナルに大きな優位性は見出しにくい結果です。短期ではニュース・要人発言などイベントドリブンな値動きの影響も大きくなりやすい点に留意してください。</p>
       </div>
       <div class="scenario">
