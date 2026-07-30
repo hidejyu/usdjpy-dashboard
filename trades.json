@@ -1,1 +1,10 @@
-[]
+[
+  {
+    "direction": "buy",
+    "entry_time": "2026-07-30 09:00",
+    "entry_price": 163.5,
+    "exit_time": null,
+    "exit_price": null,
+    "qty": 10000
+  }
+]
